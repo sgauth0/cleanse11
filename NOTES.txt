@@ -1,0 +1,317 @@
+================================================================================
+  WinImageTool - Project Notes
+  Last updated: 2026-03-22
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT THIS PROJECT IS
+--------------------------------------------------------------------------------
+
+WinImageTool is a custom Windows image customization and debloating tool built
+in C# (.NET 9 / WPF). It is inspired by NTLite but fully open and extensible.
+It lets you take a raw Windows ISO/WIM file, strip out bloatware, apply
+performance tweaks, integrate drivers and updates, configure unattended setup,
+and produce a clean bootable ISO - all from a single GUI or CLI.
+
+The project was started because:
+  - NTLite's free tier locks out the most useful features (component removal,
+    live image editing, driver exclusion, etc.)
+  - We wanted something fully controllable and extendable
+  - Several high-quality MIT-licensed open source projects exist that we can
+    legally borrow from and build on
+
+
+--------------------------------------------------------------------------------
+PROJECT STRUCTURE
+--------------------------------------------------------------------------------
+
+E:\Projects\WinImageTool\
+  WinImageTool.sln                  -- Solution file tying all projects together
+
+  src\
+    WinImageTool.Core\              -- Core library, no UI dependencies
+      Imaging\
+        ImageInfo.cs                -- Data models: WimFileInfo, WimImageInfo
+        WimManager.cs               -- Wraps libwim-15.dll (wimlib) via P/Invoke
+                                       Opens WIM/ESD files, reads image metadata
+        DismService.cs              -- Wraps Microsoft.Dism NuGet package
+                                       Mount/unmount, packages, features, drivers,
+                                       updates (add/remove)
+        IsoBuilder.cs               -- Wraps oscdimg.exe (Windows ADK) to build
+                                       bootable ISO files (dual BIOS+UEFI boot)
+      Components\
+        ComponentManager.cs         -- List and remove Windows packages/features
+                                       from a mounted image via DismService
+      Drivers\
+        DriverManager.cs            -- List drivers (DismDriverPackage), add
+                                       single INF or whole folder of INFs
+      Updates\
+        UpdateIntegrator.cs         -- Integrate .msu and .cab update packages
+                                       into a mounted image
+      Tweaks\
+        TweakDefinition.cs          -- Data models: TweakEntry, TweakGroup,
+                                       TweakCategory enum
+        TweakCatalog.cs             -- 13 categories of validated performance
+                                       registry tweaks (sourced from simplify11,
+                                       MIT licensed). Categories:
+                                         SystemLatency, InputDevice, GpuScheduling,
+                                         Network, Cpu, PowerManagement,
+                                         SystemResponsiveness, BootOptimization,
+                                         SystemMaintenance, UiResponsiveness,
+                                         Memory, DirectX, NvidiaGpu (+ AmdGpu TBD)
+        TweakApplicator.cs          -- Applies tweaks to live system or offline
+                                       mounted registry hive
+      Bloat\
+        BloatwareList.cs            -- 50+ AppX package prefixes to remove
+                                       (sourced from tiny11builder, open source)
+                                       Categorized: AI, Communication, Gaming,
+                                       Media, Microsoft365, Privacy, System
+        BloatwareManager.cs         -- Calls dism.exe /Remove-ProvisionedAppxPackage
+                                       to strip AppX packages from mounted image.
+                                       Also removes Edge, OneDrive, scheduled tasks
+        HiveManager.cs              -- Loads/unloads offline registry hives from
+                                       a mounted image using reg.exe load/unload.
+                                       Mount points: zSOFTWARE, zSYSTEM, zNTUSER,
+                                       zDEFAULT (same as tiny11builder)
+        OfflineTweaks.cs            -- Applies privacy, telemetry, hardware bypass,
+                                       and debloat registry tweaks to offline hives.
+                                       Sourced from tiny11builder (open source):
+                                         - Hardware req bypass (LabConfig keys)
+                                         - Disable sponsored/suggested apps
+                                         - Disable telemetry and tracking
+                                         - OOBE local account bypass (BypassNRO)
+                                         - Disable BitLocker auto-encryption
+                                         - Disable Copilot, Teams, Outlook re-install
+                                         - Prevent DevHome/Outlook reinstall
+      Unattended\
+        UnattendedConfig.cs         -- Data model for autounattend.xml options
+        UnattendedGenerator.cs      -- Generates autounattend.xml with proper
+                                       Windows ADK schema. Supports:
+                                         - Language/locale/timezone
+                                         - OOBE skip + EULA accept
+                                         - Local accounts
+                                         - Auto-logon
+                                         - GPT or MBR disk layout
+      Settings\
+        AppSettings.cs              -- XML-based app settings (load/save to
+                                       %LOCALAPPDATA%\WinImageTool\settings.xml)
+
+    WinImageTool.GUI\               -- WPF application (.NET 9, net9.0-windows)
+      Themes\
+        Dark.xaml                   -- Dark theme ResourceDictionary (VS Code
+                                       color palette: #1E1E1E bg, #007ACC accent)
+      ViewModels\
+        ViewModelBase.cs            -- INotifyPropertyChanged base with Set<T>
+        RelayCommand.cs             -- ICommand implementation (generic + non-generic)
+        MainViewModel.cs            -- Root VM, owns DismService, all page VMs,
+                                       and handles navigation state
+        ImageViewModel.cs           -- Load WIM/ISO (via WimManager), list images,
+                                       mount/unmount via DismService
+        ComponentsViewModel.cs      -- List packages/features, filter, remove
+        DriversViewModel.cs         -- List drivers, add from INF file or folder
+        UpdatesViewModel.cs         -- Integrate .msu/.cab from file or folder
+        TweaksViewModel.cs          -- 13-category tweak checklist, apply to
+                                       live system with progress log
+        DebloatViewModel.cs         -- Full debloat workflow: AppX removal,
+                                       Edge/OneDrive removal, offline registry
+                                       tweaks, scheduled task removal.
+                                       Includes "Apply Tiny11 Preset" one-click.
+        UnattendedViewModel.cs      -- autounattend.xml builder with live preview
+      Views\                        -- XAML views (TODO - not yet created)
+        ImageView.xaml
+        ComponentsView.xaml
+        DriversView.xaml
+        UpdatesView.xaml
+        TweaksView.xaml
+        DebloatView.xaml
+        UnattendedView.xaml
+      MainWindow.xaml               -- Shell: dark sidebar + content area (TODO)
+
+    WinImageTool.CLI\               -- Console app (.NET 9, net9.0-windows)
+      Program.cs                    -- Verb-based CLI using CommandLineParser:
+                                         info      -- list images in a WIM/ESD
+                                         mount     -- mount a WIM image
+                                         unmount   -- unmount (commit or discard)
+                                         components -- list packages/features
+                                         remove-package
+                                         add-driver
+                                         add-update
+                                         tweak     -- apply tweak categories
+                                         unattended -- generate autounattend.xml
+
+  tools\
+    wimlib\x64\libwim-15.dll        -- Copied from NTLite installation (LGPL).
+                                       Used by WimManager.cs for WIM operations.
+
+
+--------------------------------------------------------------------------------
+THIRD-PARTY SOURCES USED (ALL OPEN SOURCE / PERMISSIVE LICENSES)
+--------------------------------------------------------------------------------
+
+1. wimlib (libwim-15.dll) v1.14.4
+   Author : Eric Biggers
+   License: LGPL v3
+   Source : https://wimlib.net
+   Usage  : WIM/ESD file reading (image list, metadata)
+   Notes  : DLL copied from NTLite's tools directory (they distribute it under
+            LGPL). We load it via NativeLibrary + P/Invoke delegates.
+
+2. Microsoft.Dism NuGet package v4.0.7
+   License: MIT (Microsoft open source)
+   Source : https://www.nuget.org/packages/Microsoft.Dism
+   Usage  : All DISM operations - mount/unmount, package add/remove, driver
+            add/list, feature enable/disable, update integration
+
+3. CommandLineParser NuGet package v2.9.1
+   License: MIT
+   Source : https://www.nuget.org/packages/CommandLineParser
+   Usage  : CLI verb/option parsing in WinImageTool.CLI
+
+4. simplify11 / Winrift (registry tweaks)
+   Author : emylfy
+   License: MIT
+   Source : https://github.com/emylfy/simplify11
+   Usage  : TweakCatalog.cs contains the full 13-category registry tweak list
+            derived from this project. Original sources they credit:
+              - AlchemyTweaks/Verified-Tweaks
+              - SanGraphic/QuickBoost
+              - UnLovedCookie/CoutX
+              - denis-g/windows10-latency-optimization
+   Tweaks : SystemLatency, InputDevice, SSD/NVMe, GPU Scheduling, Network,
+            CPU, Power, Responsiveness, Boot, Maintenance, UI, Memory, DirectX,
+            NVIDIA GPU, AMD GPU
+
+5. tiny11builder
+   Author : ntdevlabs (NTDEV)
+   License: Open source (GitHub public, no explicit license - used as reference)
+   Source : https://github.com/ntdevlabs/tiny11builder
+   Usage  : BloatwareList.cs - the 50+ package prefix list
+            OfflineTweaks.cs - privacy/telemetry/hardware bypass registry keys
+            HiveManager.cs  - the zSOFTWARE/zSYSTEM/zNTUSER mount pattern
+            BloatwareManager.cs - the DISM.exe provisioned package removal flow
+   Notes  : This is the 18k-star gold standard for Windows debloating.
+            The script itself uses dism.exe, reg.exe, takeown, icacls - all
+            Microsoft-provided tools. We replicate the same logic in C#.
+
+
+--------------------------------------------------------------------------------
+KEY TECHNICAL DECISIONS
+--------------------------------------------------------------------------------
+
+1. WHY C# + .NET 9?
+   - Native Windows API access (DISM, registry, P/Invoke for wimlib)
+   - WPF for rich native GUI (same framework as most serious Windows tools)
+   - Same binary runs as both GUI (WPF) and CLI (console)
+   - Strong typing makes the complex registry and DISM logic safe
+
+2. WHY THREE PROJECTS (Core, GUI, CLI)?
+   - Core has zero UI dependencies - can be tested, reused, or called from
+     PowerShell scripts
+   - GUI and CLI both reference Core and add their own UX on top
+   - Keeps concerns clean: no WPF in Core, no DISM in ViewModels
+
+3. DISM API VS DISM.EXE
+   - Microsoft.Dism NuGet is used for most operations (mount, packages,
+     features, drivers, updates) - it gives typed results and progress callbacks
+   - For AppX provisioned package removal we call dism.exe directly because
+     DismApi.RemoveProvisionedAppxPackage exists but returns collection types
+     that are easier to query via the raw text output approach tiny11 uses
+   - For registry hive loading we use reg.exe (same as tiny11builder) because
+     Windows doesn't expose a public managed API for offline hive loading
+
+4. OFFLINE REGISTRY HIVE PATTERN
+   - Mount the image with DISM to a scratch directory
+   - Load hives: reg load HKLM\zSOFTWARE <mountpath>\Windows\System32\config\SOFTWARE
+   - Apply tweaks directly to HKLM\zSOFTWARE\... paths via Registry API
+   - Unload: reg unload HKLM\zSOFTWARE
+   - Unmount the image with commit=true to save
+   - This is exactly how tiny11builder does it (proven approach)
+
+5. WIMLIB USAGE
+   - wimlib is LGPL - we can use the DLL as-is without open-sourcing our code
+   - It gives us WIM/ESD metadata reading that DISM's managed API doesn't
+     expose as cleanly (image names, sizes, versions from XML)
+   - We load it with NativeLibrary.Load() + delegate-based P/Invoke
+   - The DLL path is resolved relative to AppContext.BaseDirectory\tools\wimlib\x64\
+
+6. ISO BUILDING
+   - Uses oscdimg.exe from the Windows ADK
+   - Dual-boot command: -bootdata:2#p0,e,b<etfsboot.com>#pEF,e,b<efisys.bin>
+   - Falls back gracefully if oscdimg is not found (IsoBuilder.IsOscdimgAvailable())
+   - Windows ADK is free to install from Microsoft
+
+
+--------------------------------------------------------------------------------
+WHAT STILL NEEDS TO BE DONE
+--------------------------------------------------------------------------------
+
+IMMEDIATE (current session):
+  [ ] Dark.xaml - complete the ResourceDictionary dark theme (was in progress)
+  [ ] All XAML Views:
+        ImageView.xaml       -- file picker, image list, mount/unmount controls
+        DebloatView.xaml     -- package checklist, options, log output
+        ComponentsView.xaml  -- packages/features list, filter, remove button
+        DriversView.xaml     -- drivers list, add file/folder buttons
+        UpdatesView.xaml     -- add file/folder, integration log
+        TweaksView.xaml      -- category checklist, apply button, log
+        UnattendedView.xaml  -- form fields + live XML preview pane
+  [ ] MainWindow.xaml        -- sidebar nav + ContentControl for page hosting
+  [ ] App.xaml               -- load Dark.xaml ResourceDictionary
+  [ ] DataTemplate bindings  -- connect ViewModels to Views
+  [ ] Full solution build verification (0 errors)
+
+NEAR TERM (next sessions):
+  [ ] IsoBuilder end-to-end - full workflow: load ISO -> mount -> debloat ->
+        offline tweaks -> unmount -> export with /Compress:recovery -> build ISO
+  [ ] "Build ISO" page/workflow in GUI tying all steps together
+  [ ] Preset system - save/load named presets as XML (like NTLite presets)
+  [ ] Progress/status improvements - real progress bar, cancellation support
+  [ ] WinSxS cleanup integration - dism /Cleanup-Image /StartComponentCleanup
+  [ ] tiny11 Core mode - option to also remove WinSxS, Defender, WinRE for
+        an ultra-minimal non-serviceable image (development/VM use)
+  [ ] AMD GPU tweaks in TweakCatalog (structure exists, entries TODO)
+
+LONGER TERM:
+  [ ] Windows ADK detection and optional install prompt
+  [ ] Update downloader (like NTLite's built-in downloader)
+  [ ] Hardware targeting (detect host drivers, filter driver list)
+  [ ] Post-setup app integration (run installers after Windows setup)
+  [ ] ESD to WIM conversion (tiny11builder does this for install.esd sources)
+  [ ] Multi-edition support (export specific edition from multi-edition WIM)
+  [ ] App icon and branding
+  [ ] Installer/setup for distribution
+
+
+--------------------------------------------------------------------------------
+HOW TO BUILD AND RUN
+--------------------------------------------------------------------------------
+
+Requirements:
+  - Windows 10/11
+  - .NET 9 SDK (installed via winget: Microsoft.DotNet.SDK.9)
+  - Optional: Windows ADK (for ISO building with oscdimg)
+  - Admin rights at runtime (DISM and registry operations require elevation)
+
+Build:
+  cd E:\Projects\WinImageTool
+  dotnet build WinImageTool.sln
+
+Run GUI:
+  dotnet run --project src\WinImageTool.GUI\WinImageTool.GUI.csproj
+
+Run CLI:
+  dotnet run --project src\WinImageTool.CLI\WinImageTool.CLI.csproj -- --help
+  dotnet run --project src\WinImageTool.CLI\WinImageTool.CLI.csproj -- info <path-to.wim>
+  dotnet run --project src\WinImageTool.CLI\WinImageTool.CLI.csproj -- tweak --list
+  dotnet run --project src\WinImageTool.CLI\WinImageTool.CLI.csproj -- unattended -o autounattend.xml
+
+
+--------------------------------------------------------------------------------
+CURRENT BUILD STATUS
+--------------------------------------------------------------------------------
+
+  WinImageTool.Core  -> BUILDS CLEAN (0 errors, 0 warnings)
+  WinImageTool.CLI   -> BUILDS CLEAN (0 errors, 0 warnings)
+  WinImageTool.GUI   -> BUILDS (skeleton only - views not yet implemented)
+
+================================================================================

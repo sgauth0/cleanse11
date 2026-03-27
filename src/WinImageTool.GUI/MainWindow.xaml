@@ -1,0 +1,245 @@
+<Window x:Class="Cleanse11.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Cleanse11.ViewModels"
+        mc:Ignorable="d"
+        Title="Cleanse11"
+        Height="720" Width="1150"
+        MinHeight="500" MinWidth="800"
+        Background="{StaticResource BackgroundBrush}"
+        WindowStyle="None"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize">
+
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="1" ResizeBorderThickness="8" CornerRadius="0" GlassFrameThickness="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title Bar — drag with mouse -->
+        <Border Grid.Row="0" Background="{StaticResource SidebarBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+                MouseLeftButtonDown="TitleBar_MouseLeftButtonDown"
+                MouseLeftButtonUp="TitleBar_MouseLeftButtonUp">
+            <Grid>
+                <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="💖" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Cleanse11" FontSize="14" FontWeight="Bold"
+                               Foreground="{StaticResource PinkHotBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text=" — Windows Image Customizer" FontSize="12"
+                               Foreground="{StaticResource ForegroundMutedBrush}" VerticalAlignment="Center"
+                               Margin="4,0,0,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="—" Style="{StaticResource TitleBarButtonStyle}"
+                            Click="MinimizeWindow"
+                            WindowChrome.IsHitTestVisibleInChrome="False"/>
+                    <Button Content="✕" Style="{StaticResource TitleBarCloseButtonStyle}"
+                            Click="CloseWindow"
+                            WindowChrome.IsHitTestVisibleInChrome="False"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="230"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar -->
+            <Border Grid.Column="0" Background="{StaticResource SidebarBrush}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Navigation Buttons -->
+                    <StackPanel Grid.Row="1" Margin="12,16,12,0">
+                        <Button Command="{Binding NavCommand}" CommandParameter="Image">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavSelection}" Value="Image">
+                                            <Setter Property="Background" Value="{StaticResource PinkLightBrush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PinkHotBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="💿" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Image" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding NavCommand}" CommandParameter="Debloat" Margin="0,4,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavSelection}" Value="Debloat">
+                                            <Setter Property="Background" Value="{StaticResource PinkLightBrush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PinkHotBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🧹" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Debloat" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding NavCommand}" CommandParameter="Components" Margin="0,4,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavSelection}" Value="Components">
+                                            <Setter Property="Background" Value="{StaticResource PinkLightBrush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PinkHotBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📦" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Components" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding NavCommand}" CommandParameter="Drivers" Margin="0,4,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavSelection}" Value="Drivers">
+                                            <Setter Property="Background" Value="{StaticResource PinkLightBrush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PinkHotBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔌" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Drivers" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding NavCommand}" CommandParameter="Updates" Margin="0,4,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavSelection}" Value="Updates">
+                                            <Setter Property="Background" Value="{StaticResource PinkLightBrush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PinkHotBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔄" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Updates" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding NavCommand}" CommandParameter="Tweaks" Margin="0,4,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavSelection}" Value="Tweaks">
+                                            <Setter Property="Background" Value="{StaticResource PinkLightBrush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PinkHotBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⚡" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Tweaks" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding NavCommand}" CommandParameter="Unattended" Margin="0,4,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavSelection}" Value="Unattended">
+                                            <Setter Property="Background" Value="{StaticResource PinkLightBrush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PinkHotBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⚙️" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Unattended" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding NavCommand}" CommandParameter="Settings" Margin="0,4,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavSelection}" Value="Settings">
+                                            <Setter Property="Background" Value="{StaticResource PinkLightBrush}"/>
+                                            <Setter Property="Foreground" Value="{StaticResource PinkHotBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔧" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Settings" VerticalAlignment="Center" FontWeight="Medium"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Footer with Admin Status -->
+                    <Border Grid.Row="2" Margin="12,0,12,16" CornerRadius="10" Padding="12,10">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#F0FFF5"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAdministrator}" Value="False">
+                                        <Setter Property="Background" Value="#FFF5F5"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding AdminStatusText}" FontSize="11"
+                                   TextWrapping="Wrap" FontWeight="Medium">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#2E7D52"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAdministrator}" Value="False">
+                                            <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Page Content with corner resize grip -->
+            <Grid Grid.Column="1">
+                <ContentControl Content="{Binding CurrentPage}"/>
+
+                <!-- Bottom-right resize thumb -->
+                <Thumb Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                       Cursor="SizeNWSE" Opacity="0.3"
+                       DragDelta="ResizeThumb_DragDelta"
+                       Background="Transparent"/>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

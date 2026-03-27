@@ -1,0 +1,107 @@
+<UserControl x:Class="Cleanse11.Views.UnattendedView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="900"
+             Background="{StaticResource BackgroundBrush}">
+
+    <Grid Margin="28">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="420"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Panel - Form -->
+            <ScrollViewer Grid.Column="0" Style="{StaticResource FadeScrollBarScrollViewer}" VerticalScrollBarVisibility="Auto" Margin="0,0,16,0">
+            <StackPanel>
+                <TextBlock Text="Unattended Setup" Style="{StaticResource HeadingAccentStyle}" Margin="0,0,0,4"/>
+                <TextBlock Text="Create an autounattend.xml file to automate Windows 11 installation with no user interaction."
+                           Style="{StaticResource MutedTextStyle}" Margin="0,0,0,20"/>
+
+                <!-- General Settings -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="General Settings" Style="{StaticResource SubheadingStyle}" Margin="0,0,0,14"/>
+                        
+                        <TextBlock Text="Computer Name" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding ComputerName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,14"/>
+
+                        <TextBlock Text="Language / Locale" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding CommonLanguages}"
+                                  SelectedItem="{Binding Language}"
+                                  Margin="0,0,0,14"/>
+
+                        <TextBlock Text="Time Zone" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding CommonTimeZones}"
+                                  SelectedItem="{Binding TimeZone}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- OOBE Settings -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Out-of-Box Experience (OOBE)" Style="{StaticResource SubheadingStyle}" Margin="0,0,0,14"/>
+                        <CheckBox Content="Skip OOBE entirely" IsChecked="{Binding SkipOobe}" Margin="0,0,0,10"/>
+                        <CheckBox Content="Accept EULA automatically" IsChecked="{Binding AcceptEula}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Auto Logon -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Auto Logon" Style="{StaticResource SubheadingStyle}" Margin="0,0,0,14"/>
+                        <CheckBox Content="Enable automatic login" IsChecked="{Binding UseAutoLogon}" Margin="0,0,0,14"/>
+                        
+                        <TextBlock Text="Username" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding AutoLogonUser, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding UseAutoLogon}" Margin="0,0,0,14"/>
+
+                        <TextBlock Text="Password" Margin="0,0,0,4"/>
+                        <PasswordBox IsEnabled="{Binding UseAutoLogon}" Margin="0,0,0,14"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Disk Settings -->
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Disk Partitioning" Style="{StaticResource SubheadingStyle}" Margin="0,0,0,14"/>
+                        <RadioButton Content="GPT (UEFI, recommended for modern PCs)" IsChecked="{Binding UseGpt}" Margin="0,0,0,8"/>
+                        <RadioButton Content="MBR (BIOS, for legacy systems)" IsChecked="{Binding UseGpt, Converter={StaticResource InverseBoolConverter}}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Actions -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,28">
+                    <Button Content="Save XML" Command="{Binding SaveCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}" Padding="22,10"/>
+                    <Button Content="Copy to Clipboard" Command="{Binding CopyCommand}"
+                            Margin="12,0,0,0" Padding="18,10"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Right Panel - XML Preview -->
+        <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="XML Preview" Style="{StaticResource SubheadingStyle}" Margin="0,0,0,10"/>
+                <TextBox Grid.Row="1" Text="{Binding PreviewXml, Mode=OneWay}"
+                         IsReadOnly="True"
+                         FontFamily="Consolas" FontSize="11"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"
+                         TextWrapping="NoWrap"
+                         Background="{StaticResource BackgroundBrush}"/>
+                <TextBlock Grid.Row="2" Text="{Binding Status}" Margin="0,10,0,0"
+                           Foreground="{StaticResource ForegroundMutedBrush}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

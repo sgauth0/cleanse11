@@ -1,0 +1,75 @@
+<UserControl x:Class="Cleanse11.Views.DriversView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="{StaticResource BackgroundBrush}">
+
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock Text="🔌 Drivers" Style="{StaticResource HeadingAccentStyle}"/>
+            <TextBlock Text="Add hardware drivers to your Windows image for better hardware support."
+                       Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource InfoBannerStyle}" Margin="0,0,0,14"
+                Visibility="{Binding ShowMountHint, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="ℹ️" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <TextBlock Text="Load and mount an image in the Image section first to manage drivers."
+                           VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,0,0,14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <Button Content="🔄 List Drivers" Command="{Binding LoadCommand}" Padding="16,8"/>
+                <Button Content="➕ Add INF" Command="{Binding AddDriverFileCommand}" 
+                        Margin="10,0,0,0" Padding="16,8"/>
+                <Button Content="📁 Add Folder" Command="{Binding AddDriverFolderCommand}" 
+                        Margin="8,0,0,0" Padding="16,8"/>
+                <CheckBox Content="Allow unsigned" IsChecked="{Binding ForceUnsigned}" 
+                          Margin="20,0,0,0" VerticalAlignment="Center" ToolTip="Allow drivers without digital signature"/>
+            </StackPanel>
+
+            <ProgressBar Grid.Row="1" IsIndeterminate="{Binding IsBusy}"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"
+                         Margin="0,10,0,0" Height="4"/>
+        </Grid>
+
+        <Border Grid.Row="3" Style="{StaticResource CardStyle}" Padding="0">
+            <DataGrid ItemsSource="{Binding Drivers}"
+                      AutoGenerateColumns="False" IsReadOnly="True"
+                      SelectionMode="Single" CanUserAddRows="False"
+                      BorderThickness="0" GridLinesVisibility="Horizontal"
+                      RowHeaderWidth="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Provider" Binding="{Binding ProviderName}" Width="120"/>
+                    <DataGridTextColumn Header="Driver Name" Binding="{Binding PublishedName}" Width="*"/>
+                    <DataGridTextColumn Header="Class" Binding="{Binding ClassName}" Width="90"/>
+                    <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="100"/>
+                    <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="80"/>
+                    <DataGridCheckBoxColumn Header="Boot" Binding="{Binding BootCritical}" Width="50"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <TextBlock Grid.Row="4" Text="{Binding Status}" Margin="0,14,0,0"
+                   Foreground="{StaticResource ForegroundMutedBrush}"/>
+    </Grid>
+</UserControl>

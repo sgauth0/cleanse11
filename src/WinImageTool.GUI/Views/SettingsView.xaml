@@ -1,0 +1,78 @@
+<UserControl x:Class="Cleanse11.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="{StaticResource BackgroundBrush}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28">
+        <StackPanel MaxWidth="700">
+
+            <TextBlock Text="⚙️ Settings" Style="{StaticResource HeadingAccentStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="Configure application preferences."
+                       Style="{StaticResource MutedTextStyle}" Margin="0,0,0,24"/>
+
+            <!-- DISM Settings -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="DISM Settings" Style="{StaticResource SubheadingStyle}" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="Scratch Directory" Margin="0,0,0,4"
+                               Foreground="{StaticResource ForegroundBrush}"/>
+                    <TextBlock Text="DISM uses this for temp files (~5GB needed). Leave empty to use C: default."
+                               Style="{StaticResource MutedTextStyle}" Margin="0,0,0,10" FontSize="11"/>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding ScratchPath, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                            <Button Content="Browse..." Command="{Binding BrowseScratchCommand}" Padding="16,8"/>
+                            <Button Content="Clear" Command="{Binding ClearScratchCommand}" 
+                                    Margin="8,0,0,0" Padding="14,8"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Separator Margin="0,10"/>
+
+                    <TextBlock Text="Working Directory" Margin="0,10,0,4"
+                               Foreground="{StaticResource ForegroundBrush}"/>
+                    <TextBlock Text="Where WIM files from ISOs are extracted and cached. Needs ~15GB+ free."
+                               Style="{StaticResource MutedTextStyle}" Margin="0,0,0,10" FontSize="11"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding WorkingDir, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseWorkingDirCommand}" 
+                                Margin="10,0,0,0" Padding="16,8"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- About -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="About Cleanse11" Style="{StaticResource SubheadingStyle}" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="Cleanse11 is a Windows 11 image customizer that lets you debloat, remove components, add drivers, and integrate updates into Windows images."
+                               TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                    <TextBlock Foreground="{StaticResource ForegroundMutedBrush}" FontSize="11">
+                        <Run Text="Version: 1.0.0"/><LineBreak/>
+                        <Run Text="Requires: Windows 10/11, .NET 9, Administrator privileges"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

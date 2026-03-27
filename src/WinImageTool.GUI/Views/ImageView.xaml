@@ -1,0 +1,254 @@
+<UserControl x:Class="Cleanse11.Views.ImageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="{StaticResource BackgroundBrush}">
+
+    <ScrollViewer Style="{StaticResource FadeScrollBarScrollViewer}" VerticalScrollBarVisibility="Auto" Padding="28">
+        <StackPanel MaxWidth="900">
+
+            <TextBlock Text="💿 Windows Image" Style="{StaticResource HeadingAccentStyle}" Margin="0,0,0,4"/>
+            <TextBlock Text="Customize a Windows 11 image by mounting it, making changes, then saving."
+                       Style="{StaticResource MutedTextStyle}" Margin="0,0,0,20"/>
+
+            <Border Style="{StaticResource WarningBannerStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⚠️" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock Text="Run as Administrator. Make your changes, then Unmount to save everything."
+                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- STEP 1: Pick an image file (only when no image loaded) -->
+            <!-- ═══════════════════════════════════════════ -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="STEP 1" FontWeight="Bold" FontSize="11"
+                                   Foreground="{StaticResource PinkHotBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <TextBlock Grid.Column="1" Text="Select your Windows image file" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Grid.Column="0" Text="{Binding LoadedFilePath, Mode=OneWay}"
+                                 IsReadOnly="True" VerticalAlignment="Center"
+                                 Background="{StaticResource BackgroundLightBrush}"/>
+                        <Button Grid.Column="1" Content="Browse for File..."
+                                Command="{Binding BrowseImageCommand}"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Margin="10,0,0,0" Padding="20,10"/>
+                    </Grid>
+
+                    <TextBlock Text="Supports .iso, .wim, and .esd files"
+                               Style="{StaticResource MutedTextStyle}" FontSize="11" Margin="0,8,0,0"/>
+
+                    <!-- Editions list (shown after image loaded) -->
+                    <StackPanel Visibility="{Binding HasImageLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Available Windows Editions:" Margin="0,18,0,8"
+                                   Foreground="{StaticResource ForegroundMutedBrush}"/>
+
+                        <ListBox ItemsSource="{Binding Images}"
+                                 SelectedItem="{Binding SelectedImage}"
+                                 Height="140" Margin="0,0,0,8">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Architecture}"
+                                                   Foreground="{StaticResource ForegroundMutedBrush}" FontSize="11" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding SizeFormatted}"
+                                                   Foreground="{StaticResource ForegroundMutedBrush}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <Button Content="🗑️ Delete Selected Edition"
+                                Command="{Binding DeleteEditionCommand}"
+                                Style="{StaticResource DangerButtonStyle}"
+                                Padding="14,8" HorizontalAlignment="Left"
+                                ToolTip="Permanently remove this edition from the WIM file. Cannot be undone!" Margin="0,0,0,8"/>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Not the right file?" VerticalAlignment="Center"
+                                       Foreground="{StaticResource ForegroundMutedBrush}" FontSize="12"/>
+                            <Button Content="Browse a different file"
+                                    Command="{Binding BrowseImageCommand}"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="{StaticResource PinkHotBrush}"
+                                    FontSize="12" Padding="6,2" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Border Margin="0,16,0,0" Padding="0" BorderThickness="0">
+                            <StackPanel>
+                                <TextBlock Text="— OR —" HorizontalAlignment="Left"
+                                           Foreground="{StaticResource ForegroundMutedBrush}" FontSize="12" Margin="0,0,0,8"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="🔗 Connect to Already Mounted Image"
+                                            Command="{Binding ConnectMountedCommand}"
+                                            Padding="16,10"/>
+                                    <TextBlock Text="If you have an image still mounted from a previous session"
+                                               VerticalAlignment="Center" FontSize="11"
+                                               Foreground="{StaticResource ForegroundMutedBrush}" Margin="10,0,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- STEP 2: Mount or Connect (only when image loaded but NOT mounted) -->
+            <!-- ═══════════════════════════════════════════ -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16"
+                    Visibility="{Binding CanMount, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="STEP 2" FontWeight="Bold" FontSize="11"
+                                   Foreground="{StaticResource PinkHotBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <TextBlock Grid.Column="1" Text="Mount the image so you can customize it" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Grid.Column="0" Text="{Binding MountPath, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalAlignment="Center"
+                                 ToolTip="Folder where the image will be mounted."/>
+                        <Button Grid.Column="1" Content="Browse..."
+                                Command="{Binding BrowseMountCommand}"
+                                Margin="10,0,0,0" Padding="16,8"/>
+                    </Grid>
+
+                    <TextBlock Text="Mount Directory — must be an empty folder (or a new folder)" FontSize="11"
+                               Foreground="{StaticResource ForegroundMutedBrush}" Margin="0,6,0,12"/>
+
+                    <Grid Margin="0,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Grid.Column="0" Text="{Binding ScratchPath, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalAlignment="Center"
+                                 ToolTip="Optional. DISM needs ~5GB free temp space. Leave empty to use C: drive."/>
+                        <Button Grid.Column="1" Content="Browse..."
+                                Command="{Binding BrowseScratchCommand}"
+                                Margin="10,0,0,0" Padding="16,8"/>
+                    </Grid>
+
+                    <TextBlock Text="Scratch Directory (optional — leave empty to use C: drive)" FontSize="11"
+                               Foreground="{StaticResource ForegroundMutedBrush}" Margin="0,6,0,14"/>
+
+                    <Button Content="▶ Mount Image" Command="{Binding MountCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Padding="28,12" HorizontalAlignment="Left"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <TextBlock Text="Already have an image mounted?" VerticalAlignment="Center"
+                                   Foreground="{StaticResource ForegroundMutedBrush}" FontSize="12"/>
+                        <Button Content="Connect to it instead"
+                                Command="{Binding ConnectMountedCommand}"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{StaticResource PinkHotBrush}"
+                                FontSize="12" Padding="6,2" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- STEP 2B: Already Mounted (show when image IS mounted) -->
+            <!-- ═══════════════════════════════════════════ -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16"
+                    Visibility="{Binding IsMounted, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="✓" FontSize="18" Foreground="#6BCFAD" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Image is mounted and ready" FontWeight="Bold" FontSize="16"/>
+                            <TextBlock Text="{Binding MountPath}" FontSize="12"
+                                       Foreground="{StaticResource ForegroundMutedBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Go to the Debloat, Components, Drivers, or Updates pages to make changes."
+                               Margin="0,14,0,0" TextWrapping="Wrap" Foreground="{StaticResource ForegroundMutedBrush}"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                        <Button Content="💾 Unmount &amp; Save Changes"
+                                Command="{Binding UnmountCommand}"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Padding="22,12" Margin="0,0,12,0"/>
+                        <Button Content="🗑️ Discard Changes &amp; Unmount"
+                                Command="{Binding UnmountDiscardCommand}"
+                                Style="{StaticResource DangerButtonStyle}"
+                                Padding="18,12"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <TextBlock Text="Mount a different image?" VerticalAlignment="Center"
+                                   Foreground="{StaticResource ForegroundMutedBrush}" FontSize="12"/>
+                        <Button Content="Load a different file"
+                                Command="{Binding BrowseImageCommand}"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{StaticResource PinkHotBrush}"
+                                FontSize="12" Padding="6,2" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- STEP 3: Status / Progress -->
+            <!-- ═══════════════════════════════════════════ -->
+            <Border Style="{StaticResource CardStyle}"
+                    Visibility="{Binding HasStatus, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="Status" Style="{StaticResource SubheadingStyle}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{Binding Status}" TextWrapping="Wrap"
+                               Foreground="{StaticResource ForegroundBrush}"/>
+                    <TextBlock Text="{Binding ProgressStep}" TextWrapping="Wrap"
+                               Foreground="{StaticResource PinkHotBrush}"
+                               FontSize="12" FontWeight="Medium"
+                               Visibility="{Binding ProgressStep, Converter={StaticResource BoolToVisibilityConverter}}"
+                               Margin="0,6,0,0"/>
+                    <ProgressBar IsIndeterminate="{Binding IsBusy}"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"
+                                 Margin="0,10,0,0" Height="4"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

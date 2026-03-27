@@ -1,0 +1,143 @@
+<UserControl x:Class="Cleanse11.Views.UpdatesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="900"
+             Background="{StaticResource BackgroundBrush}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28">
+        <StackPanel>
+
+            <!-- Header -->
+            <StackPanel Margin="0,0,0,20">
+                <TextBlock Text="Windows Updates" Style="{StaticResource HeadingAccentStyle}"/>
+                <TextBlock Text="Integrate Windows updates (.msu and .cab files) directly into your Windows 11 image."
+                           Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <!-- Windows Updates Section -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,24">
+                <StackPanel>
+                    <!-- Toolbar -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <Button Content="Add Update File" Command="{Binding AddUpdateFileCommand}" Padding="18,8"/>
+                        <Button Content="Add Update Folder" Command="{Binding AddUpdateFolderCommand}" 
+                                Margin="12,0,0,0" Padding="18,8"/>
+                    </StackPanel>
+
+                    <!-- Log -->
+                    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="8" Padding="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="Integration Log" Style="{StaticResource SubheadingStyle}" FontSize="13"/>
+                                <Button Content="Clear" Command="{Binding ClearLogCommand}" 
+                                        Margin="14,0,0,0" Padding="10,2" FontSize="11"/>
+                            </StackPanel>
+                            <ListBox Grid.Row="1" ItemsSource="{Binding Log}" 
+                                     FontFamily="Consolas" FontSize="11"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     MaxHeight="140"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Optional Apps Section -->
+            <StackPanel Margin="0,0,0,8">
+                <TextBlock Text="Optional Apps" Style="{StaticResource HeadingAccentStyle}"/>
+                <TextBlock Text="Select apps to install after Windows is set up and connected to the internet. Powered by winget."
+                           Style="{StaticResource MutedTextStyle}" Margin="0,4,0,14"/>
+            </StackPanel>
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Packages Grid -->
+                    <ItemsControl Grid.Row="0" ItemsSource="{Binding InstallPackages}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BackgroundBrush}" 
+                                        CornerRadius="10" Padding="14,12" Margin="0,0,10,10"
+                                        MinWidth="200" MaxWidth="280"
+                                        Cursor="Hand">
+                                    <Border.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick" 
+                                                      Command="{Binding DataContext.TogglePackageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                      CommandParameter="{Binding}"/>
+                                    </Border.InputBindings>
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                                            <Setter Property="BorderThickness" Value="1.5"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                                                    <Setter Property="Background" Value="{StaticResource BackgroundLighterBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" 
+                                                  VerticalAlignment="Top" Margin="0,2,10,0"
+                                                  IsHitTestVisible="False"/>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                                                       Foreground="{StaticResource ForegroundBrush}"/>
+                                            <TextBlock Text="{Binding Description}" 
+                                                       Style="{StaticResource MutedTextStyle}"
+                                                       FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+
+            <!-- Install Button & Status -->
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" Content="▶ Install Selected via Winget" 
+                        Command="{Binding InstallSelectedCommand}"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Padding="22,12"/>
+
+                <TextBlock Grid.Column="2" Text="{Binding Status}" 
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource ForegroundMutedBrush}"/>
+
+                <ProgressBar Grid.Column="1" IsIndeterminate="{Binding IsBusy}"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"
+                             Margin="16,0" VerticalAlignment="Center" Height="4"/>
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
