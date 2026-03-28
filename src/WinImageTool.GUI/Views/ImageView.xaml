@@ -56,40 +56,46 @@
                     <TextBlock Text="Supports .iso, .wim, and .esd files"
                                Style="{StaticResource MutedTextStyle}" FontSize="11" Margin="0,8,0,0"/>
 
-                    <!-- Editions list (shown after image loaded) -->
+                    <!-- Edition picker (shown after image loaded) -->
                     <StackPanel Visibility="{Binding HasImageLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <TextBlock Text="Available Windows Editions:" Margin="0,18,0,8"
+                        <TextBlock Text="Windows Edition to work with:" Margin="0,18,0,8"
                                    Foreground="{StaticResource ForegroundMutedBrush}"/>
 
-                        <ListBox ItemsSource="{Binding Images}"
-                                 SelectedItem="{Binding SelectedImage}"
-                                 Height="140" Margin="0,0,0,8">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Architecture}"
-                                                   Foreground="{StaticResource ForegroundMutedBrush}" FontSize="11" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding SizeFormatted}"
-                                                   Foreground="{StaticResource ForegroundMutedBrush}" VerticalAlignment="Center"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <Button Content="🗑️ Delete Selected Edition"
-                                Command="{Binding DeleteEditionCommand}"
-                                Style="{StaticResource DangerButtonStyle}"
-                                Padding="14,8" HorizontalAlignment="Left"
-                                ToolTip="Permanently remove this edition from the WIM file. Cannot be undone!" Margin="0,0,0,8"/>
+                            <ComboBox Grid.Column="0"
+                                      ItemsSource="{Binding Images}"
+                                      SelectedItem="{Binding SelectedImage}"
+                                      DisplayMemberPath="Name"
+                                      VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                                       Foreground="{StaticResource ForegroundMutedBrush}" FontSize="12">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="{Binding SelectedImage.SizeFormatted}"/>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
 
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Not the right file?" VerticalAlignment="Center"
+                        <!-- Delete button only shown when 2+ editions -->
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0"
+                                    Visibility="{Binding HasMultipleEditions, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Button Content="🗑️ Remove this edition from WIM"
+                                    Command="{Binding DeleteEditionCommand}"
+                                    Style="{StaticResource DangerButtonStyle}"
+                                    Padding="14,8"
+                                    ToolTip="Permanently remove this edition from the WIM file. Cannot be undone!"/>
+                            <TextBlock Text=" (reduces WIM file size for ISO builds)" VerticalAlignment="Center"
+                                       Foreground="{StaticResource ForegroundMutedBrush}" FontSize="11" Margin="8,0,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <TextBlock Text="Wrong file?" VerticalAlignment="Center"
                                        Foreground="{StaticResource ForegroundMutedBrush}" FontSize="12"/>
                             <Button Content="Browse a different file"
                                     Command="{Binding BrowseImageCommand}"
@@ -98,7 +104,7 @@
                                     FontSize="12" Padding="6,2" VerticalAlignment="Center"/>
                         </StackPanel>
 
-                        <Border Margin="0,16,0,0" Padding="0" BorderThickness="0">
+                        <Border Margin="0,14,0,0" Padding="0" BorderThickness="0">
                             <StackPanel>
                                 <TextBlock Text="— OR —" HorizontalAlignment="Left"
                                            Foreground="{StaticResource ForegroundMutedBrush}" FontSize="12" Margin="0,0,0,8"/>

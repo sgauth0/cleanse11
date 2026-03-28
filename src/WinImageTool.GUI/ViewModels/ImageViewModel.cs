@@ -57,6 +57,7 @@ public class ImageViewModel : ViewModelBase
     public bool HasImageLoaded => Images.Count > 0;
     public bool CanMount => HasImageLoaded && !IsMounted;
     public bool HasStatus => !string.IsNullOrWhiteSpace(Status);
+    public bool HasMultipleEditions => Images.Count > 1;
 
     public event Action? MountStateChanged;
 
@@ -106,6 +107,7 @@ public class ImageViewModel : ViewModelBase
 
         Images.Clear();
         Notify(nameof(HasImageLoaded));
+        Notify(nameof(HasMultipleEditions));
         Notify(nameof(CanMount));
         Status = "Loading image info...";
         IsBusy = true;
@@ -138,6 +140,7 @@ public class ImageViewModel : ViewModelBase
                     Status = $"Loaded {info.Images.Count} image(s) from {Path.GetFileName(dlg.FileName)}";
                     Notify(nameof(LoadedFilePath));
                     Notify(nameof(HasImageLoaded));
+                    Notify(nameof(HasMultipleEditions));
                     Notify(nameof(CanMount));
                 });
 
