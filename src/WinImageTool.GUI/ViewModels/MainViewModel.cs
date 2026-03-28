@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Principal;
+using WinImageTool.Core.Components;
 using WinImageTool.Core.Imaging;
 using WinImageTool.Core.Settings;
 
@@ -88,6 +89,17 @@ public class MainViewModel : ViewModelBase
             DriversVM.SetMountPath(mountPath);
             UpdatesVM.SetMountPath(mountPath);
             DebloatVM.SetMountPath(mountPath);
+        };
+
+        ImageVM.PresetRequested += presetName =>
+        {
+            var preset = ComponentPresets.All.FirstOrDefault(p =>
+                p.Name.Equals(presetName, StringComparison.OrdinalIgnoreCase));
+            if (preset != null)
+            {
+                ComponentsVM.SelectedPreset = preset;
+                NavSelection = "Components";
+            }
         };
 
         NavCommand = new RelayCommand<string>(page => NavSelection = page ?? "Image");

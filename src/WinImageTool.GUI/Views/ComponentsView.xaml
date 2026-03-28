@@ -65,7 +65,8 @@
                           SelectedItem="{Binding SelectedPreset}"
                           DisplayMemberPath="Name"
                           Width="160" VerticalAlignment="Center"/>
-                <Button Content="Apply Preset" Command="{Binding ApplyPresetCommand}"
+                <Button Content="⚡ Apply Preset &amp; Remove All" Command="{Binding ApplyPresetAndRemoveCommand}"
+                        Style="{StaticResource PrimaryButtonStyle}"
                         Padding="14,6" Margin="8,0,0,0" FontSize="12"/>
             </StackPanel>
 

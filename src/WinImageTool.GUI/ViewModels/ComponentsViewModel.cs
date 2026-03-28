@@ -75,6 +75,7 @@ public class ComponentsViewModel : ViewModelBase
     public RelayCommand RemovePackageCommand { get; }
     public RelayCommand DisableFeatureCommand { get; }
     public RelayCommand ApplyPresetCommand { get; }
+    public RelayCommand ApplyPresetAndRemoveCommand { get; }
     public RelayCommand SelectAllCommand { get; }
     public RelayCommand ClearAllCommand { get; }
 
@@ -89,6 +90,7 @@ public class ComponentsViewModel : ViewModelBase
         RemovePackageCommand  = new RelayCommand(RemovePackage,  () => !IsBusy && SelectedComponent != null);
         DisableFeatureCommand = new RelayCommand(DisableFeature, () => !IsBusy && SelectedFeature != null);
         ApplyPresetCommand = new RelayCommand(ApplyPreset, () => !IsBusy && SelectedPreset != null);
+        ApplyPresetAndRemoveCommand = new RelayCommand(ApplyPresetAndRemove, () => !IsBusy && SelectedPreset != null);
         SelectAllCommand = new RelayCommand(SelectAll);
         ClearAllCommand = new RelayCommand(ClearAll);
     }
@@ -119,7 +121,77 @@ public class ComponentsViewModel : ViewModelBase
             }
         }
         var count = Components.Count(c => c.IsSelected);
-        Status = $"Preset '{SelectedPreset.Name}' applied — {count} package(s) selected. Click 'Remove Selected' to proceed.";
+        Status = $"Preset '{SelectedPreset.Name}' applied — {count} package(s) selected. Review and click 'Remove Selected' to remove them.";
+    }
+
+    private void ApplyPresetAndRemove()
+    {
+        if (SelectedPreset == null) return;
+        IsBusy = true;
+        Status = $"Applying '{SelectedPreset.Name}' preset...";
+
+        Task.Run(() =>
+        {
+            try
+            {
+                var mgr = new ComponentManager(_dism);
+
+                if (_allComponents.Count == 0)
+                {
+                    Application.Current.Dispatcher.Invoke(() => Status = "Loading components...");
+                    var comps = mgr.ListComponents(_mountPath);
+                    var feats = mgr.ListFeatures(_mountPath);
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _allComponents = comps.Select(c => new ComponentItem(c)).ToList();
+                        _allFeatures = feats.Select(f => new FeatureItem(f)).ToList();
+                    });
+                }
+
+                var toRemove = _allComponents.Where(c =>
+                {
+                    var lower = c.Name.ToLowerInvariant();
+                    return SelectedPreset.MatchPatterns.Any(p => lower.Contains(p.ToLowerInvariant()));
+                }).ToList();
+
+                Application.Current.Dispatcher.Invoke(() =>
+                    Status = $"Applying '{SelectedPreset.Name}' — removing {toRemove.Count} package(s)...");
+
+                var removed = 0;
+                var progress = new Progress<string>(msg =>
+                    Application.Current.Dispatcher.Invoke(() => Status = msg));
+
+                foreach (var item in toRemove)
+                {
+                    try
+                    {
+                        mgr.RemovePackage(_mountPath, item.Name, progress);
+                        removed++;
+                        Application.Current.Dispatcher.Invoke(() =>
+                            Status = $"Removing bloat... ({removed}/{toRemove.Count}) '{item.Name}'");
+                    }
+                    catch (Exception ex)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                            Status = $"Could not remove '{item.Name}': {ex.Message}");
+                    }
+                }
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Status = $"✓ '{SelectedPreset.Name}' applied — {removed}/{toRemove.Count} package(s) removed.";
+                    Load();
+                });
+            }
+            catch (Exception ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => Status = $"Error: {ex.Message}");
+            }
+            finally
+            {
+                Application.Current.Dispatcher.Invoke(() => IsBusy = false);
+            }
+        });
     }
 
     private void Load()

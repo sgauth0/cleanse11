@@ -60,6 +60,7 @@ public class ImageViewModel : ViewModelBase
     public bool HasMultipleEditions => Images.Count > 1;
 
     public event Action? MountStateChanged;
+    public event Action<string>? PresetRequested;
 
     public string? LoadedFilePath => _wimFile?.FilePath;
 
@@ -73,6 +74,7 @@ public class ImageViewModel : ViewModelBase
     public RelayCommand UnmountDiscardCommand { get; }
     public RelayCommand DeleteEditionCommand { get; }
     public RelayCommand ConnectMountedCommand { get; }
+    public RelayCommand<string> ApplyPresetCommand { get; }
 
     private readonly AppSettings _settings;
 
@@ -91,6 +93,7 @@ public class ImageViewModel : ViewModelBase
         UnmountDiscardCommand = new RelayCommand(DoUnmountDiscard, () => !IsBusy && IsMounted);
         DeleteEditionCommand = new RelayCommand(DeleteEdition, () => !IsBusy && SelectedImage != null && _wimFile != null && Images.Count > 1);
         ConnectMountedCommand = new RelayCommand(ConnectToMountedImage, () => !IsBusy);
+        ApplyPresetCommand = new RelayCommand<string>(presetName => PresetRequested?.Invoke(presetName ?? ""));
     }
 
     private void BrowseImage()
