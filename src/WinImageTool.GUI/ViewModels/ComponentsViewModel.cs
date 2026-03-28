@@ -19,39 +19,25 @@ public class ComponentItem : ViewModelBase
     public ComponentItem(ComponentInfo info) { Info = info; }
 }
 
-public class FeatureItem : ViewModelBase
-{
-    private bool _isSelected;
-    public FeatureInfo Info { get; }
-    public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
-    public string Name => Info.Name;
-    public string State => Info.State;
-    public RemoveSafety Safety => Info.Safety;
-
-    public FeatureItem(FeatureInfo info) { Info = info; }
-}
-
 public class ComponentsViewModel : ViewModelBase
 {
     private readonly DismService _dism;
     private string _filterText = string.Empty;
-    private bool _showFeatures;
     private bool _isBusy;
     private string _status = string.Empty;
-    private ComponentItem? _selectedComponent;
-    private FeatureItem? _selectedFeature;
     private ComponentPreset? _selectedPreset;
+    private string _mountPath = string.Empty;
+    private List<ComponentItem> _allComponents = [];
+    private bool _isLoaded;
 
-    public ObservableCollection<ComponentItem>  Components { get; } = [];
-    public ObservableCollection<FeatureItem>     Features   { get; } = [];
-    public ObservableCollection<ComponentPreset> Presets   { get; } = new(ComponentPresets.All);
+    public ObservableCollection<ComponentItem> Components { get; } = [];
+    public ObservableCollection<ComponentPreset> Presets { get; } = new(ComponentPresets.All);
 
-    public string FilterText   { get => _filterText;  set { Set(ref _filterText, value);   ApplyFilter(); } }
-    public bool ShowFeatures   { get => _showFeatures; set { Set(ref _showFeatures, value); Notify(nameof(ShowPackages)); } }
-    public bool ShowPackages   => !_showFeatures;
-    public bool IsBusy         { get => _isBusy;  set => Set(ref _isBusy, value); }
-    public string Status       { get => _status;  set => Set(ref _status, value); }
-    public bool ShowMountHint  => string.IsNullOrEmpty(_mountPath);
+    public string FilterText { get => _filterText; set { Set(ref _filterText, value); ApplyFilter(); } }
+    public bool IsBusy { get => _isBusy; set => Set(ref _isBusy, value); }
+    public string Status { get => _status; set => Set(ref _status, value); }
+    public bool ShowMountHint => string.IsNullOrEmpty(_mountPath) || !_isLoaded;
+    public int SelectedCount => Components.Count(c => c.IsSelected);
 
     public ComponentPreset? SelectedPreset
     {
@@ -59,147 +45,76 @@ public class ComponentsViewModel : ViewModelBase
         set { Set(ref _selectedPreset, value); }
     }
 
-    public ComponentItem? SelectedComponent
-    {
-        get => _selectedComponent;
-        set { Set(ref _selectedComponent, value); RemovePackageCommand.RaiseCanExecuteChanged(); }
-    }
-
-    public FeatureItem? SelectedFeature
-    {
-        get => _selectedFeature;
-        set { Set(ref _selectedFeature, value); DisableFeatureCommand.RaiseCanExecuteChanged(); }
-    }
-
-    public RelayCommand LoadCommand          { get; }
-    public RelayCommand RemovePackageCommand { get; }
-    public RelayCommand DisableFeatureCommand { get; }
+    public RelayCommand LoadCommand { get; }
     public RelayCommand ApplyPresetCommand { get; }
     public RelayCommand ApplyPresetAndRemoveCommand { get; }
+    public RelayCommand RemoveSelectedCommand { get; }
     public RelayCommand SelectAllCommand { get; }
     public RelayCommand ClearAllCommand { get; }
 
-    private string _mountPath = string.Empty;
-    private List<ComponentItem>  _allComponents = [];
-    private List<FeatureItem>    _allFeatures   = [];
+    private bool HasSelectedComponents => Components.Any(c => c.IsSelected);
 
     public ComponentsViewModel(DismService dism)
     {
         _dism = dism;
-        LoadCommand           = new RelayCommand(Load,           () => !IsBusy);
-        RemovePackageCommand  = new RelayCommand(RemovePackage,  () => !IsBusy && SelectedComponent != null);
-        DisableFeatureCommand = new RelayCommand(DisableFeature, () => !IsBusy && SelectedFeature != null);
+        LoadCommand = new RelayCommand(Load, () => !IsBusy && !string.IsNullOrEmpty(_mountPath));
         ApplyPresetCommand = new RelayCommand(ApplyPreset, () => !IsBusy && SelectedPreset != null);
         ApplyPresetAndRemoveCommand = new RelayCommand(ApplyPresetAndRemove, () => !IsBusy && SelectedPreset != null);
+        RemoveSelectedCommand = new RelayCommand(RemoveSelected, () => !IsBusy && HasSelectedComponents);
         SelectAllCommand = new RelayCommand(SelectAll);
         ClearAllCommand = new RelayCommand(ClearAll);
     }
 
-    public void SetMountPath(string path) 
-    { 
-        _mountPath = path; 
-        Notify(nameof(ShowMountHint)); 
+    public void SetMountPath(string path)
+    {
+        _mountPath = path;
+        Notify(nameof(ShowMountHint));
+        if (!_isLoaded && !string.IsNullOrEmpty(path))
+            Load();
     }
 
-    private void SelectAll()    { foreach (var c in Components) c.IsSelected = true; }
-    private void ClearAll()     { foreach (var c in Components) c.IsSelected = false; }
+    private void SelectAll()
+    {
+        foreach (var c in _allComponents) c.IsSelected = true;
+        Notify(nameof(SelectedCount));
+        Status = $"All {_allComponents.Count} items selected.";
+    }
+
+    private void ClearAll()
+    {
+        foreach (var c in _allComponents) c.IsSelected = false;
+        Notify(nameof(SelectedCount));
+        Status = "Selection cleared.";
+    }
 
     private void ApplyPreset()
     {
         if (SelectedPreset == null) return;
-        ClearAll();
-        foreach (var item in Components)
+        foreach (var c in _allComponents) c.IsSelected = false;
+
+        foreach (var c in _allComponents)
         {
-            var lower = item.Name.ToLowerInvariant();
+            var lower = c.Name.ToLowerInvariant();
             foreach (var pattern in SelectedPreset.MatchPatterns)
             {
                 if (lower.Contains(pattern.ToLowerInvariant()))
                 {
-                    item.IsSelected = true;
+                    c.IsSelected = true;
                     break;
                 }
             }
         }
-        var count = Components.Count(c => c.IsSelected);
-        Status = $"Preset '{SelectedPreset.Name}' applied — {count} package(s) selected. Review and click 'Remove Selected' to remove them.";
-    }
-
-    private void ApplyPresetAndRemove()
-    {
-        if (SelectedPreset == null) return;
-        IsBusy = true;
-        Status = $"Applying '{SelectedPreset.Name}' preset...";
-
-        Task.Run(() =>
-        {
-            try
-            {
-                var mgr = new ComponentManager(_dism);
-
-                if (_allComponents.Count == 0)
-                {
-                    Application.Current.Dispatcher.Invoke(() => Status = "Loading components...");
-                    var comps = mgr.ListComponents(_mountPath);
-                    var feats = mgr.ListFeatures(_mountPath);
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _allComponents = comps.Select(c => new ComponentItem(c)).ToList();
-                        _allFeatures = feats.Select(f => new FeatureItem(f)).ToList();
-                    });
-                }
-
-                var toRemove = _allComponents.Where(c =>
-                {
-                    var lower = c.Name.ToLowerInvariant();
-                    return SelectedPreset.MatchPatterns.Any(p => lower.Contains(p.ToLowerInvariant()));
-                }).ToList();
-
-                Application.Current.Dispatcher.Invoke(() =>
-                    Status = $"Applying '{SelectedPreset.Name}' — removing {toRemove.Count} package(s)...");
-
-                var removed = 0;
-                var progress = new Progress<string>(msg =>
-                    Application.Current.Dispatcher.Invoke(() => Status = msg));
-
-                foreach (var item in toRemove)
-                {
-                    try
-                    {
-                        mgr.RemovePackage(_mountPath, item.Name, progress);
-                        removed++;
-                        Application.Current.Dispatcher.Invoke(() =>
-                            Status = $"Removing bloat... ({removed}/{toRemove.Count}) '{item.Name}'");
-                    }
-                    catch (Exception ex)
-                    {
-                        Application.Current.Dispatcher.Invoke(() =>
-                            Status = $"Could not remove '{item.Name}': {ex.Message}");
-                    }
-                }
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    Status = $"✓ '{SelectedPreset.Name}' applied — {removed}/{toRemove.Count} package(s) removed.";
-                    Load();
-                });
-            }
-            catch (Exception ex)
-            {
-                Application.Current.Dispatcher.Invoke(() => Status = $"Error: {ex.Message}");
-            }
-            finally
-            {
-                Application.Current.Dispatcher.Invoke(() => IsBusy = false);
-            }
-        });
+        Notify(nameof(SelectedCount));
+        var count = _allComponents.Count(c => c.IsSelected);
+        Status = $"'{SelectedPreset.Name}' selected {count} item(s).";
     }
 
     private void Load()
     {
-        if (string.IsNullOrEmpty(_mountPath)) { Status = "No image mounted. Mount an image first."; return; }
-        if (!Directory.Exists(_mountPath)) { Status = $"Mount path does not exist: {_mountPath}"; return; }
+        if (string.IsNullOrEmpty(_mountPath)) { Status = "No image mounted."; return; }
+        if (!Directory.Exists(_mountPath)) { Status = $"Mount path not found: {_mountPath}"; return; }
         IsBusy = true;
-        Status = $"Loading from: {_mountPath}";
+        Status = "Loading components...";
 
         Task.Run(() =>
         {
@@ -207,13 +122,13 @@ public class ComponentsViewModel : ViewModelBase
             {
                 var mgr = new ComponentManager(_dism);
                 var comps = mgr.ListComponents(_mountPath);
-                var feats = mgr.ListFeatures(_mountPath);
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     _allComponents = comps.Select(c => new ComponentItem(c)).ToList();
-                    _allFeatures   = feats.Select(f => new FeatureItem(f)).ToList();
                     ApplyFilter();
-                    Status = $"{comps.Count} packages, {feats.Count} features";
+                    _isLoaded = true;
+                    Notify(nameof(ShowMountHint));
+                    Status = $"Loaded {_allComponents.Count} packages.";
                 });
             }
             catch (Exception ex)
@@ -230,53 +145,132 @@ public class ComponentsViewModel : ViewModelBase
     private void ApplyFilter()
     {
         Components.Clear();
-        Features.Clear();
-        var f = _filterText.ToLowerInvariant();
-        foreach (var c in _allComponents.Where(c => string.IsNullOrEmpty(f) || c.Name.Contains(f, StringComparison.OrdinalIgnoreCase)))
+        var f = FilterText?.ToLowerInvariant() ?? "";
+        foreach (var c in _allComponents.Where(c =>
+            string.IsNullOrEmpty(f) || c.Name.Contains(f, StringComparison.OrdinalIgnoreCase)))
             Components.Add(c);
-        foreach (var ft in _allFeatures.Where(ft => string.IsNullOrEmpty(f) || ft.Name.Contains(f, StringComparison.OrdinalIgnoreCase)))
-            Features.Add(ft);
+        Notify(nameof(SelectedCount));
     }
 
-    private void RemovePackage()
+    public async Task ApplyFullPresetAsync(FullPreset preset, Action<string>? onProgress = null)
     {
-        if (SelectedComponent == null) return;
-        var name = SelectedComponent.Name;
+        if (string.IsNullOrEmpty(_mountPath))
+        {
+            onProgress?.Invoke("Components: No mount path.");
+            return;
+        }
+
+        if (!_isLoaded)
+        {
+            onProgress?.Invoke("Components: Loading packages...");
+            Load();
+            await Task.Run(() => { while (!_isLoaded && IsBusy) Thread.Sleep(100); Thread.Sleep(200); });
+        }
+
+        var name = preset switch
+        {
+            FullPreset.Lite => "Lite",
+            FullPreset.OpenClaw => "Openclaw",
+            _ => "Lite"
+        };
+        var presetToApply = Presets.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (presetToApply == null)
+        {
+            onProgress?.Invoke($"Components: Preset '{name}' not found.");
+            return;
+        }
+
+        SelectedPreset = presetToApply;
+        ApplyPreset();
+        var toRemove = _allComponents.Where(c => c.IsSelected).ToList();
+        onProgress?.Invoke($"Components: Removing {toRemove.Count} package(s)...");
+
+        if (toRemove.Count == 0)
+        {
+            onProgress?.Invoke("Components: No packages to remove.");
+            return;
+        }
+
         IsBusy = true;
-        var progress = new Progress<string>(msg => Application.Current.Dispatcher.Invoke(() => Status = msg));
+        var mgr = new ComponentManager(_dism);
+        var removed = 0;
+        var failed = 0;
+
+        foreach (var item in toRemove)
+        {
+            try
+            {
+                onProgress?.Invoke($"Components: Removing ({removed + 1}/{toRemove.Count}): {Truncate(item.Name, 50)}");
+                await Task.Run(() => mgr.RemovePackage(_mountPath, item.Name, null));
+                removed++;
+            }
+            catch
+            {
+                failed++;
+            }
+        }
+
+        foreach (var item in toRemove)
+            _allComponents.Remove(item);
+        ApplyFilter();
+        IsBusy = false;
+        onProgress?.Invoke($"Components: ✓ Removed {removed} package(s)" + (failed > 0 ? $" ({failed} failed)" : ""));
+    }
+
+    private void ApplyPresetAndRemove()
+    {
+        if (SelectedPreset == null) return;
+        ApplyPreset();
+        RemoveSelected();
+    }
+
+    private void RemoveSelected()
+    {
+        var toRemove = _allComponents.Where(c => c.IsSelected).ToList();
+        if (toRemove.Count == 0) return;
+        IsBusy = true;
+        Status = $"Removing {toRemove.Count} item(s)...";
+
         Task.Run(() =>
         {
             try
             {
-                new ComponentManager(_dism).RemovePackage(_mountPath, name, progress);
-                Application.Current.Dispatcher.Invoke(() => { _allComponents.RemoveAll(c => c.Name == name); ApplyFilter(); });
+                var mgr = new ComponentManager(_dism);
+                var removed = 0;
+                var failed = 0;
+
+                foreach (var item in toRemove)
+                {
+                    try
+                    {
+                        Application.Current.Dispatcher.Invoke(() => Status = $"Removing ({removed + 1}/{toRemove.Count}): {Truncate(item.Name, 50)}");
+                        mgr.RemovePackage(_mountPath, item.Name, null);
+                        removed++;
+                    }
+                    catch
+                    {
+                        failed++;
+                    }
+                }
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    foreach (var item in toRemove)
+                        _allComponents.Remove(item);
+                    ApplyFilter();
+                    Status = $"✓ Removed {removed} package(s)" + (failed > 0 ? $" ({failed} failed)" : "");
+                });
             }
             catch (Exception ex)
             {
                 Application.Current.Dispatcher.Invoke(() => Status = $"Error: {ex.Message}");
             }
-            finally { Application.Current.Dispatcher.Invoke(() => IsBusy = false); }
+            finally
+            {
+                Application.Current.Dispatcher.Invoke(() => IsBusy = false);
+            }
         });
     }
 
-    private void DisableFeature()
-    {
-        if (SelectedFeature == null) return;
-        var name = SelectedFeature.Name;
-        IsBusy = true;
-        var progress = new Progress<string>(msg => Application.Current.Dispatcher.Invoke(() => Status = msg));
-        Task.Run(() =>
-        {
-            try
-            {
-                new ComponentManager(_dism).DisableFeature(_mountPath, name, progress);
-                Application.Current.Dispatcher.Invoke(Load);
-            }
-            catch (Exception ex)
-            {
-                Application.Current.Dispatcher.Invoke(() => Status = $"Error: {ex.Message}");
-            }
-            finally { Application.Current.Dispatcher.Invoke(() => IsBusy = false); }
-        });
-    }
+    private static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max) + "...";
 }

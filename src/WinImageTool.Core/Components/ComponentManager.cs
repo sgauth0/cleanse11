@@ -150,6 +150,8 @@ public class ComponentManager
     }
 }
 
+public enum FullPreset { Lite, OpenClaw }
+
 public record ComponentPreset(string Name, string Description, string[] MatchPatterns);
 
 public static class ComponentPresets

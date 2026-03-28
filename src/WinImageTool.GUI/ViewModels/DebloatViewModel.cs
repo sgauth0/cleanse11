@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using WinImageTool.Core.Bloat;
+using WinImageTool.Core.Components;
 
 namespace Cleanse11.ViewModels;
 
@@ -113,5 +114,56 @@ public class DebloatViewModel : ViewModelBase
             }
             finally { Application.Current.Dispatcher.Invoke(() => IsBusy = false); }
         });
+    }
+
+    public async Task ApplyFullPresetAsync(FullPreset preset, Action<string>? onProgress = null)
+    {
+        if (string.IsNullOrEmpty(_mountPath))
+        {
+            onProgress?.Invoke("Debloat: No mount path.");
+            return;
+        }
+
+        foreach (var p in Packages)
+            p.IsSelected = p.Package.DefaultSelected;
+        RemoveEdge = true;
+        RemoveOneDrive = true;
+        ApplyOfflineTweaks = true;
+        RemoveScheduledTasks = true;
+
+        IsBusy = true;
+        Log.Clear();
+        var selected = Packages.Where(p => p.IsSelected).Select(p => p.Package).ToList();
+        onProgress?.Invoke($"Debloat: Applying to {selected.Count} package(s)...");
+
+        var progress = new Progress<string>(msg =>
+        {
+            Log.Add(msg);
+            onProgress?.Invoke(msg);
+        });
+
+        try
+        {
+            var mgr = new BloatwareManager();
+            await Task.Run(() =>
+            {
+                mgr.RemovePackages(_mountPath, selected, progress);
+                if (RemoveEdge || RemoveOneDrive)
+                    mgr.RemoveEdgeAndOneDrive(_mountPath, progress);
+                if (RemoveScheduledTasks)
+                    mgr.RemoveScheduledTasks(_mountPath, progress);
+                if (ApplyOfflineTweaks)
+                    new OfflineTweaks(_mountPath).Apply(progress);
+            });
+            onProgress?.Invoke("Debloat: ✓ Complete.");
+        }
+        catch (Exception ex)
+        {
+            onProgress?.Invoke($"Debloat: ✗ {ex.Message}");
+        }
+        finally
+        {
+            Application.Current.Dispatcher.Invoke(() => IsBusy = false);
+        }
     }
 }

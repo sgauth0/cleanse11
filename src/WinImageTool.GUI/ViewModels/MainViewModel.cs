@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Security.Principal;
+using System.Windows;
 using WinImageTool.Core.Components;
 using WinImageTool.Core.Imaging;
 using WinImageTool.Core.Settings;
+using Cleanse11.Views;
 
 namespace Cleanse11.ViewModels;
 
@@ -91,14 +93,28 @@ public class MainViewModel : ViewModelBase
             DebloatVM.SetMountPath(mountPath);
         };
 
-        ImageVM.PresetRequested += presetName =>
+        ImageVM.PresetRequested += async presetName =>
         {
-            var preset = ComponentPresets.All.FirstOrDefault(p =>
-                p.Name.Equals(presetName, StringComparison.OrdinalIgnoreCase));
-            if (preset != null)
+            var fullPreset = presetName.Equals("Lite", StringComparison.OrdinalIgnoreCase)
+                ? FullPreset.Lite
+                : FullPreset.OpenClaw;
+
+            NavSelection = "Components";
+            ImageVM.Status = $"Applying '{presetName}' preset across all sections...";
+
+            await ComponentsVM.ApplyFullPresetAsync(fullPreset, msg => Application.Current.Dispatcher.Invoke(() => ImageVM.Status = msg));
+            await DebloatVM.ApplyFullPresetAsync(fullPreset, msg => Application.Current.Dispatcher.Invoke(() => ImageVM.Status = msg));
+            await TweaksVM.ApplyFullPresetAsync(fullPreset, msg => Application.Current.Dispatcher.Invoke(() => ImageVM.Status = msg));
+
+            ImageVM.Status = $"'{presetName}' preset applied to Components, Debloat, and Tweaks.";
+
+            var dialog = new PostPresetDialog(presetName);
+            var result = dialog.ShowDialog();
+
+            if (result == true && dialog.BuildIsoRequested)
             {
-                ComponentsVM.SelectedPreset = preset;
-                NavSelection = "Components";
+                NavSelection = "Image";
+                ImageVM.Status = "ISO building coming soon...";
             }
         };
 

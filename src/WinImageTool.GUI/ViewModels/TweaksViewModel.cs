@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using WinImageTool.Core.Components;
 using WinImageTool.Core.Tweaks;
 
 namespace Cleanse11.ViewModels;
@@ -173,5 +174,54 @@ public class TweaksViewModel : ViewModelBase
             }
             finally { Application.Current.Dispatcher.Invoke(() => IsBusy = false); }
         });
+    }
+
+    public async Task ApplyFullPresetAsync(FullPreset preset, Action<string>? onProgress = null)
+    {
+        foreach (var g in TweakGroups) g.IsSelected = true;
+        var selectedEntries = TweakGroups
+            .Where(g => g.IsSelected)
+            .SelectMany(g => g.GetSelectedEntries())
+            .ToList();
+
+        if (selectedEntries.Count == 0)
+        {
+            onProgress?.Invoke("Tweaks: No tweaks to apply.");
+            return;
+        }
+
+        IsBusy = true;
+        Log.Clear();
+        onProgress?.Invoke($"Tweaks: Applying {selectedEntries.Count} tweak(s)...");
+
+        var progress = new Progress<string>(msg =>
+        {
+            Log.Add(msg);
+            onProgress?.Invoke(msg);
+        });
+
+        try
+        {
+            var applicator = new TweakApplicator();
+            await Task.Run(() =>
+            {
+                int applied = 0;
+                foreach (var entry in selectedEntries)
+                {
+                    applicator.ApplyEntry(entry, progress);
+                    applied++;
+                    onProgress?.Invoke($"Tweaks: Applied {applied}/{selectedEntries.Count}");
+                }
+            });
+            onProgress?.Invoke("Tweaks: ✓ Complete. Restart recommended.");
+        }
+        catch (Exception ex)
+        {
+            onProgress?.Invoke($"Tweaks: ✗ {ex.Message}");
+        }
+        finally
+        {
+            Application.Current.Dispatcher.Invoke(() => IsBusy = false);
+        }
     }
 }
